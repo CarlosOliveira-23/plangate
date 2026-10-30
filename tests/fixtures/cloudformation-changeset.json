@@ -1,0 +1,30 @@
+{
+  "Status": "CREATE_COMPLETE",
+  "Changes": [
+    {
+      "Type": "Resource",
+      "ResourceChange": {
+        "Action": "Remove",
+        "LogicalResourceId": "OrdersTable",
+        "ResourceType": "AWS::DynamoDB::Table"
+      }
+    },
+    {
+      "Type": "Resource",
+      "ResourceChange": {
+        "Action": "Modify",
+        "LogicalResourceId": "ApiFunction",
+        "ResourceType": "AWS::Lambda::Function",
+        "Replacement": "False"
+      }
+    },
+    {
+      "Type": "Resource",
+      "ResourceChange": {
+        "Action": "Add",
+        "LogicalResourceId": "NewQueue",
+        "ResourceType": "AWS::SQS::Queue"
+      }
+    }
+  ]
+}
