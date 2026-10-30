@@ -1,0 +1,40 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_db_instance.main",
+      "type": "aws_db_instance",
+      "change": {
+        "actions": ["delete", "create"],
+        "before": { "tags_all": { "Environment": "production" } },
+        "after": { "tags_all": { "Environment": "production" } }
+      }
+    },
+    {
+      "address": "aws_iam_role.worker",
+      "type": "aws_iam_role",
+      "change": {
+        "actions": ["delete"],
+        "before": { "tags_all": {} },
+        "after": null
+      }
+    },
+    {
+      "address": "aws_s3_object.config",
+      "type": "aws_s3_object",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": { "tags_all": {} }
+      }
+    },
+    {
+      "address": "data.aws_ami.base",
+      "type": "aws_ami",
+      "change": {
+        "actions": ["read"],
+        "before": null,
+        "after": null
+      }
+    }
+  ]
+}
