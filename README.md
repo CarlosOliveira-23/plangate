@@ -164,7 +164,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: CarlosOliveira-23/plangate@v0.1.0
+      - uses: CarlosOliveira-23/plangate@v0.1.1
         with:
           command: "terraform apply -auto-approve"
           working-directory: "infra/"
