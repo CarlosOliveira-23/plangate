@@ -1,4 +1,5 @@
 import { readFileSync, existsSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
 import yaml from "js-yaml";
 import { run } from "../exec.js";
 import { tokenize, getFlagValue, getFlagList } from "../argParse.js";
@@ -62,7 +63,7 @@ function manifestToChange(doc: K8sManifest): ResourceChange | undefined {
 function fromManifestFiles(files: string[], cwd: string): ResourceChange[] {
   const changes: ResourceChange[] = [];
   for (const file of files) {
-    const path = file.startsWith("/") ? file : `${cwd}/${file}`;
+    const path = isAbsolute(file) ? file : join(cwd, file);
     if (!existsSync(path)) continue;
     const content = readFileSync(path, "utf8");
     const docs = yaml.loadAll(content) as K8sManifest[];
