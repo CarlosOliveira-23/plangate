@@ -31,11 +31,6 @@ export interface InitHookOptions {
  * Registers PlanGate as a Claude Code PreToolUse hook on the Bash tool,
  * merging into whatever settings.json already has rather than overwriting
  * it. Idempotent: running it twice doesn't add a duplicate entry.
- *
- * NOTE: this writes the hook configuration the current community
- * documentation describes (matcher + hooks[].type/command). Verify with
- * `/hooks` inside Claude Code after installing, since this project
- * couldn't reach docs.anthropic.com to confirm the schema directly.
  */
 export async function runInitHook(options: InitHookOptions): Promise<number> {
   const path = options.global

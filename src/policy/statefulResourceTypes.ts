@@ -1,15 +1,12 @@
 import type { StatefulRule } from "../types.js";
 
 /**
- * Resource types where "delete" or "replace" means real, usually unrecoverable
- * data loss or a production outage -- the exact set of actions behind the
- * Amazon Kiro (Cost Explorer wiped) and PocketOS (production DB + backups
- * wiped in one call) incidents that motivated this tool. Deliberately
- * over-inclusive: a false positive costs you one confirmation prompt, a
- * false negative costs you your database.
+ * Resource types where delete/replace means usually-unrecoverable data loss
+ * or an outage -- the blast radius behind the incidents that motivated this
+ * tool. Deliberately over-inclusive: a false positive costs one
+ * confirmation prompt, a false negative costs your database.
  */
 export const BUILTIN_STATEFUL_RULES: StatefulRule[] = [
-  // --- Terraform (provider-agnostic resource type strings) ---
   { provider: "terraform", pattern: "^aws_db_instance", label: "RDS instance" },
   { provider: "terraform", pattern: "^aws_db_cluster", label: "Aurora/RDS cluster" },
   { provider: "terraform", pattern: "^aws_rds_cluster", label: "RDS cluster" },
@@ -25,8 +22,6 @@ export const BUILTIN_STATEFUL_RULES: StatefulRule[] = [
   { provider: "terraform", pattern: "^azurerm_cosmosdb", label: "Cosmos DB account" },
   { provider: "terraform", pattern: "^azurerm_storage_account$", label: "Azure storage account" },
   { provider: "terraform", pattern: "^kubernetes_persistent_volume", label: "Kubernetes PersistentVolume" },
-
-  // --- AWS CloudFormation ---
   { provider: "cloudformation", pattern: "^AWS::RDS::DBInstance$", label: "RDS instance" },
   { provider: "cloudformation", pattern: "^AWS::RDS::DBCluster$", label: "RDS/Aurora cluster" },
   { provider: "cloudformation", pattern: "^AWS::DynamoDB::Table$", label: "DynamoDB table" },
@@ -35,22 +30,16 @@ export const BUILTIN_STATEFUL_RULES: StatefulRule[] = [
   { provider: "cloudformation", pattern: "^AWS::EFS::FileSystem$", label: "EFS file system" },
   { provider: "cloudformation", pattern: "^AWS::Backup::BackupVault$", label: "AWS Backup vault" },
   { provider: "cloudformation", pattern: "^AWS::Cognito::UserPool$", label: "Cognito user pool" },
-
-  // --- Azure (ARM/Bicep resource type strings) ---
   { provider: "azure", pattern: "^Microsoft\\.Sql/servers/databases$", label: "Azure SQL database" },
   { provider: "azure", pattern: "^Microsoft\\.DocumentDB/databaseAccounts$", label: "Cosmos DB account" },
   { provider: "azure", pattern: "^Microsoft\\.Storage/storageAccounts$", label: "Azure storage account" },
   { provider: "azure", pattern: "^Microsoft\\.DBforPostgreSQL/", label: "Azure PostgreSQL" },
   { provider: "azure", pattern: "^Microsoft\\.DBforMySQL/", label: "Azure MySQL" },
-
-  // --- Kubernetes ---
   { provider: "kubernetes", pattern: "^PersistentVolumeClaim$", label: "PersistentVolumeClaim" },
   { provider: "kubernetes", pattern: "^PersistentVolume$", label: "PersistentVolume" },
   { provider: "kubernetes", pattern: "^StatefulSet$", label: "StatefulSet" },
   { provider: "kubernetes", pattern: "^Namespace$", label: "Namespace (deletes everything inside it)" },
   { provider: "kubernetes", pattern: "^Secret$", label: "Secret" },
-
-  // --- Single-shot AWS CLI calls with no plan/dry-run equivalent ---
   { provider: "aws-cli", pattern: "^rds:db-instance$", label: "RDS instance" },
   { provider: "aws-cli", pattern: "^rds:db-cluster$", label: "RDS/Aurora cluster" },
   { provider: "aws-cli", pattern: "^dynamodb:table$", label: "DynamoDB table" },
@@ -58,11 +47,7 @@ export const BUILTIN_STATEFUL_RULES: StatefulRule[] = [
   { provider: "aws-cli", pattern: "^ec2:instance$", label: "EC2 instance" },
   { provider: "aws-cli", pattern: "^elasticache:cache-cluster$", label: "ElastiCache cluster" },
   { provider: "aws-cli", pattern: "^cloudformation:stack$", label: "CloudFormation stack" },
-
-  // --- Docker / self-hosted VPS (Hostinger, Oracle Cloud, bare metal, ...) ---
   { provider: "docker", pattern: "^docker:volume$", label: "Docker volume" },
-
-  // --- Direct database CLI access, the common case on a VPS with no IaC in front of it ---
   { provider: "database", pattern: "^database:database$", label: "database" },
   { provider: "database", pattern: "^database:table$", label: "table" }
 ];
