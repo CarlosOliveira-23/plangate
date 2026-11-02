@@ -1,0 +1,22 @@
+{
+  "changes": [
+    {
+      "resourceId": "/subscriptions/sub1/resourceGroups/rg1/providers/Microsoft.Sql/servers/myserver/databases/mydb",
+      "changeType": "Delete",
+      "before": { "tags": { "Environment": "production" } },
+      "after": null
+    },
+    {
+      "resourceId": "/subscriptions/sub1/resourceGroups/rg1/providers/Microsoft.Web/sites/myapp",
+      "changeType": "Modify",
+      "before": { "tags": {} },
+      "after": { "tags": {} }
+    },
+    {
+      "resourceId": "/subscriptions/sub1/resourceGroups/rg1/providers/Microsoft.Storage/storageAccounts/mystorage",
+      "changeType": "NoChange",
+      "before": {},
+      "after": {}
+    }
+  ]
+}
