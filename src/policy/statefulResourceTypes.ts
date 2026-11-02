@@ -57,7 +57,14 @@ export const BUILTIN_STATEFUL_RULES: StatefulRule[] = [
   { provider: "aws-cli", pattern: "^s3:bucket$", label: "S3 bucket" },
   { provider: "aws-cli", pattern: "^ec2:instance$", label: "EC2 instance" },
   { provider: "aws-cli", pattern: "^elasticache:cache-cluster$", label: "ElastiCache cluster" },
-  { provider: "aws-cli", pattern: "^cloudformation:stack$", label: "CloudFormation stack" }
+  { provider: "aws-cli", pattern: "^cloudformation:stack$", label: "CloudFormation stack" },
+
+  // --- Docker / self-hosted VPS (Hostinger, Oracle Cloud, bare metal, ...) ---
+  { provider: "docker", pattern: "^docker:volume$", label: "Docker volume" },
+
+  // --- Direct database CLI access, the common case on a VPS with no IaC in front of it ---
+  { provider: "database", pattern: "^database:database$", label: "database" },
+  { provider: "database", pattern: "^database:table$", label: "table" }
 ];
 
 export function isStateful(

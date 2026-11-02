@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    volumes:
+      - db_data:/var/lib/postgresql/data
+  cache:
+    image: redis:7
+    volumes:
+      - cache_data:/data
+
+volumes:
+  db_data:
+  cache_data:
+  shared_assets:
+    external: true

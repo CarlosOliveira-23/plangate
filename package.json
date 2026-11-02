@@ -1,7 +1,7 @@
 {
   "name": "plangate",
   "version": "0.1.0",
-  "description": "Stops AI coding agents from running destructive cloud/infra changes by gating them on the real structured plan/diff/change-set, not the command text.",
+  "description": "Stops AI coding agents from running destructive cloud, VPS, Docker, and database commands by gating them on the real structured plan/diff/change-set, not the command text.",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -32,6 +32,12 @@
     "aws",
     "azure",
     "kubernetes",
+    "docker",
+    "docker-compose",
+    "postgresql",
+    "mysql",
+    "vps",
+    "self-hosted",
     "guardrail",
     "security",
     "devops"

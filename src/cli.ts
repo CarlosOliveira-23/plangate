@@ -9,7 +9,7 @@ const program = new Command();
 
 program
   .name("plangate")
-  .description("Gates AI-agent-proposed cloud/infra commands on the real structured plan/diff, not the command text.")
+  .description("Gates AI-agent-proposed cloud, VPS, Docker, and database commands on the real structured plan/diff, not the command text.")
   .version("0.1.0");
 
 program

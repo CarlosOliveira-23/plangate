@@ -1,4 +1,4 @@
-export type Provider = "terraform" | "cloudformation" | "azure" | "kubernetes" | "aws-cli";
+export type Provider = "terraform" | "cloudformation" | "azure" | "kubernetes" | "aws-cli" | "docker" | "database";
 
 export type ChangeAction = "create" | "update" | "delete" | "replace" | "no-op" | "unknown";
 
