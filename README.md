@@ -3,7 +3,7 @@
 # 🛡️ PlanGate
 
 **Stops AI coding agents from running destructive cloud, VPS, and database
-commands — by gating on the real structured plan the target system computes,
+commands. It gates on the real structured plan the target system computes,
 not the text of the command.**
 
 [![CI](https://github.com/CarlosOliveira-23/plangate/actions/workflows/ci.yml/badge.svg)](https://github.com/CarlosOliveira-23/plangate/actions/workflows/ci.yml)
@@ -40,48 +40,40 @@ ASK  terraform apply -auto-approve
 
 ## 🧨 Why PlanGate Exists
 
-In December 2025, a ~13-hour outage of AWS Cost Explorer in one of Amazon's
-mainland China regions was linked by anonymous Amazon sources, via the
-Financial Times, to Amazon's own internal AI coding agent, Kiro, autonomously
-deleting and recreating a live production environment while assigned a bug
-fix. Amazon disputes the AI-agent framing and attributes the outage to
-misconfigured access controls, not agent action — see
-[The Register's coverage of both accounts](https://www.theregister.com/2026/02/20/amazon_denies_kiro_agentic_ai_behind_outage/).
-Separately, in April 2026, a Cursor agent running Claude Opus deleted
-car-rental startup PocketOS's entire production database **and its
-volume-level backups** in a single API call to its infra provider — this one
-is not disputed; the founder
-[documented it in detail](https://www.tomsguide.com/ai/i-guessed-instead-of-verifying-claude-ai-agent-wipes-companys-entire-database-in-9-seconds-then-apologizes).
-Whichever account of the first incident you believe, the second alone is why
-"give the agent infra access" now comes with real fear attached.
+AI coding agents deleting production data isn't a hypothetical. It's a
+documented, recurring pattern: an agent misreads a task, runs a destructive
+command against the wrong environment, and nothing in between asks "wait,
+what does this actually delete?" before it's too late. That gap between an
+agent's intent and its blast radius is why handing an agent real infra
+access now comes with genuine fear attached.
 
-**This isn't just a big-cloud problem.** Most of the write-ups about agents
+**And this isn't just a big-cloud problem.** Most write-ups about agents
 destroying production assume an AWS account with IAM, backups, and a
-platform team behind it. The far more common reality for most of the
-developer community is a single VPS — Hostinger, Oracle Cloud's free tier,
-DigitalOcean, a home server — running Docker Compose with no backups, no
-staging environment, and no one else to catch the mistake. That's a *smaller*
-blast radius in absolute terms and a *larger* one relative to the person
-running it. PlanGate treats both as first-class: Terraform/CloudFormation/
-Azure for the enterprise case, Docker Compose and direct Postgres/MySQL/Mongo/
-Redis access for everyone else.
+platform team behind it. For a lot of the developer community the reality
+is simpler: a single VPS (Hostinger, Oracle Cloud's free tier, DigitalOcean,
+a home server) running Docker Compose, no backups, no staging, nobody else
+around to catch the mistake. The blast radius is smaller in absolute terms,
+but it's bigger relative to the person running it. PlanGate treats both as
+first-class: Terraform, CloudFormation, and Azure for the enterprise case;
+Docker Compose and direct Postgres/MySQL/Mongo/Redis access for everyone
+else.
 
 Several tools already try to stop this (`agent-guardrails`,
 `destructive_command_guard`, `ai-agent-guardrails`, AWS's own Bedrock
-AgentCore guardrails). **Every one of them decides by pattern-matching the
-command's text** — block it if it looks like `terraform destroy`. One of them
-documents this plainly in its own source: unrecognized commands are allowed
-by default. That's a fail-open design with a known, acknowledged weakness: an
-agent (or a confused rephrasing) that expresses the same destructive intent
-differently just walks through it.
+AgentCore guardrails), and **every one of them decides by pattern-matching
+the command's text**: block it if it looks like `terraform destroy`. One of
+them says so plainly in its own source: unrecognized commands are allowed
+by default. That's a fail-open design, and it has a known weakness its own
+authors acknowledge. An agent, or just a confused rephrasing, that
+expresses the same destructive intent differently walks right through it.
 
-**PlanGate decides differently: it never reads the command as the source of
-truth, and it never fails open.** For every proposed command, it asks the
-target system itself what would actually happen — via the mechanism each one
-already ships for exactly this purpose, or by reading the one structured
-source that does exist (a compose file, a live manifest) — and blocks based
-on *that* answer. When no structured answer is possible at all, it asks a
-human instead of guessing.
+**PlanGate decides differently.** It never treats the command text as the
+source of truth, and it never fails open. For every proposed command, it
+asks the target system itself what would actually happen, using the
+mechanism each one already ships for exactly this purpose, or by reading
+the one structured source that does exist (a compose file, a live
+manifest). It blocks based on that answer. When no structured answer is
+possible at all, it asks a human instead of guessing.
 
 ## 🛡️ How It Decides
 
@@ -103,13 +95,13 @@ human instead of guessing.
 
 4. **Optional extra layer.** If [checkov](https://www.checkov.io/) is
    installed, PlanGate runs it too and escalates the verdict on any
-   HIGH/CRITICAL finding — for broader multi-cloud policy coverage
+   HIGH/CRITICAL finding. That gives broader multi-cloud policy coverage
    (Dockerfile, ARM/Bicep, Serverless Framework, etc.) without reinventing
    those checks.
 
 ## 🤖 Supported Targets
 
-**Tier 1 — structured plan/diff, read directly from the provider**
+**Tier 1: structured plan/diff, read directly from the provider**
 
 | Target | Native "show me what changes" primitive PlanGate uses |
 |---|---|
@@ -117,7 +109,7 @@ human instead of guessing.
 | AWS CloudFormation | `create-change-set` + `describe-change-set` (structured `Changes[].ResourceChange`) |
 | Azure (ARM/Bicep) | `az deployment ... what-if` (Azure's own native dry-run, literally named for this) |
 
-**Tier 2 — no native dry-run, so PlanGate reads the one structured source that exists**
+**Tier 2: no native dry-run, so PlanGate reads the one structured source that exists**
 
 | Target | What PlanGate reads instead |
 |---|---|
@@ -125,7 +117,7 @@ human instead of guessing.
 | Docker Compose (`docker compose down -v`) | The compose file's own `volumes:` section (skips `external: true` volumes, which `-v` doesn't delete) |
 | `docker volume rm <names>` | The volume names given directly on the command line |
 
-**Tier 3 — genuinely no plan exists anywhere; PlanGate always requires confirmation, by design**
+**Tier 3: genuinely no plan exists anywhere, so PlanGate always requires confirmation by design**
 
 | Target | Examples |
 |---|---|
@@ -152,7 +144,7 @@ plangate init-hook     # registers PlanGate as a Claude Code PreToolUse hook
 This is the main use case: every `Bash` tool call Claude Code's agent makes
 is checked before it runs. A `deny` blocks the command outright; an `ask`
 surfaces PlanGate's reasons and asks you to confirm, with the actual
-resource-level diff in front of you — not the agent's paraphrase of it.
+resource-level diff in front of you instead of the agent's paraphrase of it.
 
 > **Hook protocol:** verified against the official Claude Code hooks
 > reference (`hookSpecificOutput.permissionDecision` /
@@ -218,8 +210,8 @@ not the only layer you should have:
 - **`kubectl delete` and `kubectl apply --prune`**, and **`docker volume
   prune`/`docker system prune --volumes`/`docker rm -v`**, have no native
   plan/diff primitive and no enumerable removal set ahead of time. PlanGate
-  asks for confirmation rather than guessing — tightening this further (e.g.
-  live-inspecting a container's mounts before `docker rm -v`) is open work,
+  asks for confirmation rather than guessing. Tightening this further (e.g.
+  live-inspecting a container's mounts before `docker rm -v`) is open work;
   see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Azure what-if JSON parsing** handles both response shapes Microsoft's own
   docs describe (`{ changes }` and the raw ARM `{ properties: { changes } }`),
@@ -227,14 +219,14 @@ not the only layer you should have:
   page no longer exists. Verify against your own `az deployment group what-if
   -o json` output before relying on it for anything production-critical.
 - **Nothing here has run against real cloud credentials or a real VPS** in
-  this project's own CI — tests use realistic fixtures, not live
+  this project's own CI. Tests use realistic fixtures, not live
   infrastructure. Validate against a real staging environment before
   trusting it in production.
 
 ## 🤝 Contributing
 
 New providers and external-scanner integrations are the highest-leverage
-contribution — see [CONTRIBUTING.md](CONTRIBUTING.md).
+contribution. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 📄 License
 

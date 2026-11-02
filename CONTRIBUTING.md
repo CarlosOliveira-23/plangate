@@ -1,21 +1,22 @@
 # Contributing to PlanGate
 
-PlanGate's core bet is: **never trust the command text when a structured plan/diff
-exists, and when it doesn't, never guess — ask.** The highest-leverage contributions
-right now are the ones that extend that principle to more ground:
+PlanGate's core bet is simple: **never trust the command text when a structured
+plan/diff exists, and when it doesn't, never guess, just ask.** The
+highest-leverage contributions right now are the ones that extend that
+principle to more ground:
 
-- **A new provider** (`src/providers/`) — anything with a native "show me what
+- **A new provider** (`src/providers/`). Anything with a native "show me what
   would change" primitive is a good fit: Pulumi (`pulumi preview --json`), AWS CDK
   (`cdk diff`), GCP Deployment Manager, Ansible (`--check` + `--diff`), Podman.
 - **Tightening an existing Tier 3 provider** (`docker.ts`, `database.ts`,
-  `awsSingleShot.ts`) — e.g. live-inspecting a container's mounts before
+  `awsSingleShot.ts`). For example, live-inspecting a container's mounts before
   `docker rm -v` instead of always asking, or enumerating `docker volume prune`'s
   target set from `docker volume ls -f dangling=true` before it runs.
-- **A new external scanner integration** (`src/policy/externalScanners.ts`) —
-  today only `checkov` is wired in. `tfsec`/`trivy` and `cfn-guard` are natural
+- **A new external scanner integration** (`src/policy/externalScanners.ts`).
+  Today only `checkov` is wired in. `tfsec`/`trivy` and `cfn-guard` are natural
   next additions; the `runCheckov` function is meant to be a template, not a
   one-off.
-- **Better tag/ownership extraction** — the more reliably PlanGate can tell a
+- **Better tag/ownership extraction.** The more reliably PlanGate can tell a
   resource is tagged `Environment=production`, the fewer unnecessary "ask"
   prompts show up for everything else.
 
@@ -31,10 +32,10 @@ node dist/cli.js check -- aws rds delete-db-instance --db-instance-identifier te
 ## Adding a provider
 
 1. Create `src/providers/yourtool.ts` with:
-   - `isYourToolApplyLike(command: string): boolean` — detection.
-   - `parseYourToolPlanJson(json: string): ResourceChange[]` — pure parsing,
+   - `isYourToolApplyLike(command: string): boolean`: detection.
+   - `parseYourToolPlanJson(json: string): ResourceChange[]`: pure parsing,
      easy to unit test with a fixture, no process execution.
-   - `getYourToolPlan(command: string, cwd: string): PlanResult` — orchestrates
+   - `getYourToolPlan(command: string, cwd: string): PlanResult`: orchestrates
      running the real dry-run/plan/diff command and calls the pure parser.
      **Fail closed**: any error, missing binary, or unexpected output shape
      must return `{ degraded: true, note: "..." }`, never a silently empty
