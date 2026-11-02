@@ -1,5 +1,5 @@
 name: "PlanGate"
-description: "Gates a proposed Terraform/CloudFormation/Azure/kubectl/Docker/database command on its real structured plan, not the command text. Use it to pre-flight a PR the same way the Claude Code hook gates an agent."
+description: "Gates destructive Terraform/CloudFormation/Azure/kubectl/Docker/database commands on the real plan, not the command text."
 branding:
   icon: "shield"
   color: "red"
