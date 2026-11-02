@@ -19,12 +19,10 @@ function collectFailedChecks(parsed: unknown): CheckovFailedCheck[] {
 }
 
 /**
- * Checkov is an optional *extra* signal, not PlanGate's core safety
- * mechanism -- if it's missing, misconfigured, or its JSON shape changed
- * between versions, we fail OPEN here (leave the verdict as the plan-diff
- * engine decided it) rather than blocking everything just because a
- * third-party scanner didn't run. The plan-diff + stateful-resource check
- * is what you can rely on even with checkov uninstalled.
+ * Checkov is an optional *extra* signal, not PlanGate's core safety net --
+ * if it's missing, misconfigured, or its JSON shape changed, we fail OPEN
+ * here (keep the plan-diff engine's verdict) rather than block everything
+ * just because a third-party scanner didn't run.
  */
 export function runCheckov(plan: PlanResult, cwd: string, verdict: Verdict): Verdict {
   if (!isInstalled("checkov")) return verdict;

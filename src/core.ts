@@ -2,6 +2,8 @@ import { isTerraformApplyLike, getTerraformPlan } from "./providers/terraform.js
 import { isCloudFormationApplyLike, getCloudFormationPlan } from "./providers/cloudformation.js";
 import { isAzureDeployApplyLike, getAzureWhatIfPlan } from "./providers/azure.js";
 import { isKubectlDestructive, getKubectlPlan } from "./providers/kubectl.js";
+import { isDockerDestructive, getDockerPlan } from "./providers/docker.js";
+import { getDatabasePlan } from "./providers/database.js";
 import { getAwsSingleShotPlan } from "./providers/awsSingleShot.js";
 import { evaluatePlan } from "./policy/index.js";
 import { runCheckov } from "./policy/externalScanners.js";
@@ -19,6 +21,10 @@ export function getPlanForCommand(command: string, cwd: string): PlanResult | un
   if (isCloudFormationApplyLike(command)) return getCloudFormationPlan(command, cwd);
   if (isAzureDeployApplyLike(command)) return getAzureWhatIfPlan(command, cwd);
   if (isKubectlDestructive(command)) return getKubectlPlan(command, cwd);
+  if (isDockerDestructive(command)) return getDockerPlan(command, cwd);
+
+  const databasePlan = getDatabasePlan(command);
+  if (databasePlan) return databasePlan;
 
   const singleShot = getAwsSingleShotPlan(command);
   if (singleShot) return singleShot;

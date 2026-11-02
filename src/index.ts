@@ -9,4 +9,6 @@ export { parseTerraformPlanJson, isTerraformApplyLike } from "./providers/terraf
 export { parseChangeSetJson, isCloudFormationApplyLike } from "./providers/cloudformation.js";
 export { parseWhatIfJson, isAzureDeployApplyLike } from "./providers/azure.js";
 export { isKubectlDestructive } from "./providers/kubectl.js";
+export { isDockerDestructive, extractComposeVolumeNames } from "./providers/docker.js";
+export { matchDestructiveDatabaseCommand } from "./providers/database.js";
 export { matchSingleShotDestructive } from "./providers/awsSingleShot.js";
