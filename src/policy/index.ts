@@ -23,8 +23,8 @@ function tagsMatchProtected(
 /**
  * Evaluates a structured plan against policy. Fails closed: anything we
  * couldn't confidently classify becomes "ask", never "allow". A false
- * positive costs one confirmation; a false negative is the Kiro/PocketOS
- * incident this tool exists to prevent.
+ * positive costs one confirmation; a false negative is the kind of incident
+ * this tool exists to prevent.
  */
 export function evaluatePlan(plan: PlanResult, config: PlanGateConfig): Verdict {
   if (plan.degraded) {

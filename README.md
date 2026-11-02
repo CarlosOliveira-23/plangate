@@ -40,20 +40,12 @@ ASK  terraform apply -auto-approve
 
 ## 🧨 Why PlanGate Exists
 
-In December 2025, a ~13-hour outage of AWS Cost Explorer in one of Amazon's
-mainland China regions was linked by anonymous Amazon sources, via the
-Financial Times, to Amazon's own internal AI coding agent, Kiro, autonomously
-deleting and recreating a live production environment while assigned a bug
-fix. Amazon disputes the AI-agent framing and attributes the outage to
-misconfigured access controls, not agent action — see
-[The Register's coverage of both accounts](https://www.theregister.com/2026/02/20/amazon_denies_kiro_agentic_ai_behind_outage/).
-Separately, in April 2026, a Cursor agent running Claude Opus deleted
-car-rental startup PocketOS's entire production database **and its
-volume-level backups** in a single API call to its infra provider — this one
-is not disputed; the founder
-[documented it in detail](https://www.tomsguide.com/ai/i-guessed-instead-of-verifying-claude-ai-agent-wipes-companys-entire-database-in-9-seconds-then-apologizes).
-Whichever account of the first incident you believe, the second alone is why
-"give the agent infra access" now comes with real fear attached.
+AI coding agents deleting production data is not a hypothetical — it's a
+documented, recurring pattern: an agent misreads a task, runs a destructive
+command against the wrong environment, and there's no step in between that
+asks "wait, what does this actually delete?" before it's too late. That
+gap, between an agent's intent and its blast radius, is why "give the agent
+infra access" now comes with real fear attached.
 
 **This isn't just a big-cloud problem.** Most of the write-ups about agents
 destroying production assume an AWS account with IAM, backups, and a
