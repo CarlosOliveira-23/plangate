@@ -1,73 +1,139 @@
-# PlanGate
+<div align="center">
 
-**Stops AI coding agents from running destructive cloud/infra changes — by gating
-on the real structured plan the cloud provider computes, not the text of the
-command.**
+# 🛡️ PlanGate
 
-[![CI](https://github.com/YOUR_GITHUB_USERNAME/plangate/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_GITHUB_USERNAME/plangate/actions/workflows/ci.yml)
+**Stops AI coding agents from running destructive cloud, VPS, and database
+commands — by gating on the real structured plan the target system computes,
+not the text of the command.**
+
+[![CI](https://github.com/CarlosOliveira-23/plangate/actions/workflows/ci.yml/badge.svg)](https://github.com/CarlosOliveira-23/plangate/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![npm](https://img.shields.io/npm/v/plangate.svg)](https://www.npmjs.com/package/plangate)
+[![Node >= 18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](package.json)
+[![GitHub stars](https://img.shields.io/github/stars/CarlosOliveira-23/plangate?style=social)](https://github.com/CarlosOliveira-23/plangate/stargazers)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+</div>
 
 ```
-$ plangate check -- aws rds delete-db-instance --db-instance-identifier prod-db --skip-final-snapshot
-DENY  aws rds delete-db-instance --db-instance-identifier prod-db --skip-final-snapshot
-  - prod-db is a RDS instance (rds:db-instance) and would be deleted.
+$ plangate check -- docker compose down -v
+DENY  docker compose down -v
+  - db_data is a Docker volume (docker:volume) and would be deleted.
+  - cache_data is a Docker volume (docker:volume) and would be deleted.
 
 $ plangate check -- terraform apply -auto-approve
 ASK  terraform apply -auto-approve
   - `terraform plan` failed: ... Refusing to approve an unverified apply.
 ```
 
-## Why this exists
+## 📖 Table of Contents
 
-In February 2026, Amazon's own internal AI coding agent, Kiro, was assigned a
-bug fix in AWS Cost Explorer — and instead of patching it, decided a full
-environment reset was the better move, causing a ~13-hour regional outage
-([Financial Times](https://www.ft.com/)). In April 2026, a Cursor agent running
-Claude Opus deleted a company's entire production database **and its backup
-volume** in a single API call. These aren't hypotheticals; they're why "give
-the agent AWS/Terraform access" now comes with real fear attached.
+- [🧨 Why PlanGate Exists](#-why-plangate-exists)
+- [🛡️ How It Decides](#️-how-it-decides)
+- [🤖 Supported Targets](#-supported-targets)
+- [🚀 Quick Start](#-quick-start)
+- [🔌 Use It as a Claude Code Hook](#-use-it-as-a-claude-code-hook)
+- [🧪 Use It as a CI Gate](#-use-it-as-a-ci-gate)
+- [⚙️ Configuration](#️-configuration)
+- [🧯 Honest Limitations](#-honest-limitations)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
 
-Several tools already try to stop this (`agent-guardrails`, `destructive_command_guard`,
-`ai-agent-guardrails`, AWS's own Bedrock AgentCore guardrails). **Every one of
-them decides by pattern-matching the command's text** — block it if it looks
-like `terraform destroy`. That has a documented, acknowledged weakness: an
+## 🧨 Why PlanGate Exists
+
+In December 2025, a ~13-hour outage of AWS Cost Explorer in one of Amazon's
+mainland China regions was linked by anonymous Amazon sources, via the
+Financial Times, to Amazon's own internal AI coding agent, Kiro, autonomously
+deleting and recreating a live production environment while assigned a bug
+fix. Amazon disputes the AI-agent framing and attributes the outage to
+misconfigured access controls, not agent action — see
+[The Register's coverage of both accounts](https://www.theregister.com/2026/02/20/amazon_denies_kiro_agentic_ai_behind_outage/).
+Separately, in April 2026, a Cursor agent running Claude Opus deleted
+car-rental startup PocketOS's entire production database **and its
+volume-level backups** in a single API call to its infra provider — this one
+is not disputed; the founder
+[documented it in detail](https://www.tomsguide.com/ai/i-guessed-instead-of-verifying-claude-ai-agent-wipes-companys-entire-database-in-9-seconds-then-apologizes).
+Whichever account of the first incident you believe, the second alone is why
+"give the agent infra access" now comes with real fear attached.
+
+**This isn't just a big-cloud problem.** Most of the write-ups about agents
+destroying production assume an AWS account with IAM, backups, and a
+platform team behind it. The far more common reality for most of the
+developer community is a single VPS — Hostinger, Oracle Cloud's free tier,
+DigitalOcean, a home server — running Docker Compose with no backups, no
+staging environment, and no one else to catch the mistake. That's a *smaller*
+blast radius in absolute terms and a *larger* one relative to the person
+running it. PlanGate treats both as first-class: Terraform/CloudFormation/
+Azure for the enterprise case, Docker Compose and direct Postgres/MySQL/Mongo/
+Redis access for everyone else.
+
+Several tools already try to stop this (`agent-guardrails`,
+`destructive_command_guard`, `ai-agent-guardrails`, AWS's own Bedrock
+AgentCore guardrails). **Every one of them decides by pattern-matching the
+command's text** — block it if it looks like `terraform destroy`. One of them
+documents this plainly in its own source: unrecognized commands are allowed
+by default. That's a fail-open design with a known, acknowledged weakness: an
 agent (or a confused rephrasing) that expresses the same destructive intent
 differently just walks through it.
 
 **PlanGate decides differently: it never reads the command as the source of
-truth.** For every proposed command, it asks the cloud provider itself what
-would actually happen — via the mechanism each one already ships for exactly
-this purpose — and blocks based on *that* structured answer.
+truth, and it never fails open.** For every proposed command, it asks the
+target system itself what would actually happen — via the mechanism each one
+already ships for exactly this purpose, or by reading the one structured
+source that does exist (a compose file, a live manifest) — and blocks based
+on *that* answer. When no structured answer is possible at all, it asks a
+human instead of guessing.
 
-| Provider | Native "show me what changes" primitive PlanGate uses |
-|---|---|
-| Terraform (AWS/GCP/Azure/any provider) | `terraform plan` + `terraform show -json` (structured `resource_changes`) |
-| AWS CloudFormation | `create-change-set` + `describe-change-set` (structured `Changes[].ResourceChange`) |
-| Azure (ARM/Bicep) | `az deployment ... what-if` (Azure's own native dry-run, literally named for this) |
-| Kubernetes | Target manifest / live object inspection (`kubectl delete` has no plan; see Limitations) |
-| AWS CLI single-shot calls (`terminate-instances`, `delete-db-instance`, ...) | No plan exists for these — PlanGate always requires confirmation, by design |
-
-## How it decides
+## 🛡️ How It Decides
 
 1. **Extract the real plan.** PlanGate ignores the agent's command text and
-   independently runs the provider's own plan/diff/what-if primitive in the
-   same working directory.
+   independently runs the target's own plan/diff/what-if primitive (or reads
+   the one structured file that describes the blast radius) in the same
+   working directory.
 2. **Classify every change.** Each resource change becomes `create` /
    `update` / `delete` / `replace`.
-3. **Apply policy, failing closed.** Delete/replace on a stateful resource
-   type (RDS, DynamoDB, S3, Cosmos DB, Azure SQL, PersistentVolume, ...) or on
-   anything tagged `Environment=production` → **deny**. Delete/replace on
-   anything else → **ask** a human. Pure create/update → **allow**. If the
-   plan extraction itself fails for any reason (tool missing, auth error,
-   parse error) → **ask**, never allow.
+3. **Apply policy, failing closed:**
+
+   | Situation | Verdict |
+   |---|---|
+   | Delete/replace on a stateful resource (RDS, DynamoDB, S3, Cosmos DB, Azure SQL, PersistentVolume, Docker volume, a database/table, ...) | **deny** |
+   | Delete/replace on anything tagged `Environment=production` | **deny**, regardless of type |
+   | Delete/replace on anything else | **ask** a human |
+   | Pure create/update | **allow** |
+   | Plan extraction itself fails (tool missing, auth error, parse error, nothing to read) | **ask**, never allow |
+
 4. **Optional extra layer.** If [checkov](https://www.checkov.io/) is
    installed, PlanGate runs it too and escalates the verdict on any
    HIGH/CRITICAL finding — for broader multi-cloud policy coverage
    (Dockerfile, ARM/Bicep, Serverless Framework, etc.) without reinventing
    those checks.
 
-## Install
+## 🤖 Supported Targets
+
+**Tier 1 — structured plan/diff, read directly from the provider**
+
+| Target | Native "show me what changes" primitive PlanGate uses |
+|---|---|
+| Terraform (AWS/GCP/Azure/any provider) | `terraform plan` + `terraform show -json` (structured `resource_changes`) |
+| AWS CloudFormation | `create-change-set` + `describe-change-set` (structured `Changes[].ResourceChange`) |
+| Azure (ARM/Bicep) | `az deployment ... what-if` (Azure's own native dry-run, literally named for this) |
+
+**Tier 2 — no native dry-run, so PlanGate reads the one structured source that exists**
+
+| Target | What PlanGate reads instead |
+|---|---|
+| Kubernetes (`kubectl delete`, `apply --prune`) | The target manifest, or the live object's labels |
+| Docker Compose (`docker compose down -v`) | The compose file's own `volumes:` section (skips `external: true` volumes, which `-v` doesn't delete) |
+| `docker volume rm <names>` | The volume names given directly on the command line |
+
+**Tier 3 — genuinely no plan exists anywhere; PlanGate always requires confirmation, by design**
+
+| Target | Examples |
+|---|---|
+| AWS CLI single-shot calls | `terminate-instances`, `delete-db-instance`, `delete-table`, `delete-bucket`, ... |
+| Docker, unenumerable scope | `docker volume prune`, `docker system prune --volumes`, `docker rm -v <container>` |
+| Direct database access | `psql`/`mysql` `DROP DATABASE`/`DROP TABLE`/`TRUNCATE`, `dropdb`, `mysqladmin drop`, `mongosh --eval "db.dropDatabase()"`, `redis-cli FLUSHALL`/`FLUSHDB` |
+
+## 🚀 Quick Start
 
 ```bash
 npm install -g plangate
@@ -75,28 +141,28 @@ npm install -g plangate
 npx plangate check -- terraform apply
 ```
 
-## Use it as a Claude Code hook (the main use case)
-
 ```bash
 cd your-project
-plangate init        # writes .plangate.yml
-plangate init-hook    # registers PlanGate as a PreToolUse hook in .claude/settings.json
+plangate init         # writes .plangate.yml
+plangate init-hook     # registers PlanGate as a Claude Code PreToolUse hook
 ```
 
-From then on, every `Bash` tool call Claude Code's agent makes is checked
-before it runs. A `deny` blocks the command outright; an `ask` surfaces
-PlanGate's reasons and asks you to confirm, with the actual resource-level
-diff in front of you — not the agent's paraphrase of it.
+## 🔌 Use It as a Claude Code Hook
 
-> **Note on the hook protocol:** this was built against the PreToolUse hook
-> shape (`hookSpecificOutput.permissionDecision` / `permissionDecisionReason`)
-> as documented by the Claude Code community at the time of writing. This
-> project's build environment couldn't reach `docs.anthropic.com` directly to
-> triple-check the exact schema — after installing, run `/hooks` inside Claude
-> Code to confirm it registered correctly, and please open an issue if the
-> schema has since changed.
+This is the main use case: every `Bash` tool call Claude Code's agent makes
+is checked before it runs. A `deny` blocks the command outright; an `ask`
+surfaces PlanGate's reasons and asks you to confirm, with the actual
+resource-level diff in front of you — not the agent's paraphrase of it.
 
-## Use it as a CI gate
+> **Hook protocol:** verified against the official Claude Code hooks
+> reference (`hookSpecificOutput.permissionDecision` /
+> `permissionDecisionReason`, `allow`/`ask`/`deny`). One thing to know: the
+> registered hook runs `npx plangate hook`, so every matched `Bash` call pays
+> `npx`'s cold-start latency. If that's noticeable, install PlanGate globally
+> and edit the `command` in `.claude/settings.json` to call the `plangate`
+> binary directly instead.
+
+## 🧪 Use It as a CI Gate
 
 ```yaml
 # .github/workflows/infra-review.yml
@@ -106,7 +172,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: YOUR_GITHUB_USERNAME/plangate@main
+      - uses: CarlosOliveira-23/plangate@main
         with:
           command: "terraform apply -auto-approve"
           working-directory: "infra/"
@@ -114,7 +180,9 @@ jobs:
 
 Same decision engine, now gating a human's PR instead of an agent's tool call.
 
-## Configuration (`.plangate.yml`)
+## ⚙️ Configuration
+
+`.plangate.yml`, scaffolded by `plangate init`:
 
 ```yaml
 protectedTags:
@@ -125,7 +193,7 @@ allowlist: []                # resourceType regexes allowed to delete/replace wi
 useCheckov: true
 ```
 
-## Command reference
+**Command reference:**
 
 ```
 plangate check -- <command...>   # manually evaluate a command; exits 1 unless ALLOW
@@ -134,34 +202,50 @@ plangate init                      # scaffold .plangate.yml
 plangate init-hook [--global]      # register the hook in .claude/settings.json
 ```
 
-## Honest limitations (defense in depth, not a silver bullet)
+## 🧯 Honest Limitations
 
 **No tool that only watches Bash commands is unbypassable**, and anyone who
 tells you otherwise is overselling. If the agent has direct SDK/API access
-(a Python script calling `boto3` instead of shelling out to the AWS CLI),
-a Bash-level hook never sees it. PlanGate is one real layer, not the only
-layer you should have:
+(a Python script calling `boto3`, or a database driver instead of shelling
+out to the CLI), a Bash-level hook never sees it. PlanGate is one real layer,
+not the only layer you should have:
 
 - **Scope the agent's IAM role / service principal.** A permission boundary
   or SCP that denies `rds:DeleteDBInstance`/`dynamodb:DeleteTable` etc. at the
-  credential level holds even if every CLI-level guard is bypassed. This is
-  the layer that actually can't be talked around.
-- **`kubectl delete` and `kubectl apply --prune`** have no native plan/diff
-  primitive at all. PlanGate reads the target manifest or the live object to
-  judge blast radius, but for `--prune` specifically (where the removal set
-  depends on comparing against everything already applied) it currently
-  always asks rather than enumerating the diff — tightening this is open work,
-  see `CONTRIBUTING.md`.
-- **Azure what-if JSON parsing** is based on the documented response shape;
-  this project's sandbox couldn't reach Azure's docs to triple-check field
-  names either. Verify against your own `az deployment group what-if -o json`
-  output before relying on it for anything production-critical.
+  credential level holds even if every CLI-level guard is bypassed. On a bare
+  VPS, the equivalent is: don't run the agent as a user that can `sudo`, and
+  don't let it hold your database's root/admin credentials directly.
+- **`kubectl delete` and `kubectl apply --prune`**, and **`docker volume
+  prune`/`docker system prune --volumes`/`docker rm -v`**, have no native
+  plan/diff primitive and no enumerable removal set ahead of time. PlanGate
+  asks for confirmation rather than guessing — tightening this further (e.g.
+  live-inspecting a container's mounts before `docker rm -v`) is open work,
+  see [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Azure what-if JSON parsing** handles both response shapes Microsoft's own
+  docs describe (`{ changes }` and the raw ARM `{ properties: { changes } }`),
+  since the conceptual docs and the REST reference disagree and the CLI-specific
+  page no longer exists. Verify against your own `az deployment group what-if
+  -o json` output before relying on it for anything production-critical.
+- **Nothing here has run against real cloud credentials or a real VPS** in
+  this project's own CI — tests use realistic fixtures, not live
+  infrastructure. Validate against a real staging environment before
+  trusting it in production.
 
-## Contributing
+## 🤝 Contributing
 
 New providers and external-scanner integrations are the highest-leverage
 contribution — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## License
+## 📄 License
 
 [MIT](LICENSE)
+
+---
+
+<div align="center">
+
+If PlanGate stopped an agent from doing something you'd have regretted, a ⭐ helps the next person find it before they need it.
+
+[![Star History Chart](https://api.star-history.com/svg?repos=CarlosOliveira-23/plangate&type=Date)](https://star-history.com/#CarlosOliveira-23/plangate&Date)
+
+</div>

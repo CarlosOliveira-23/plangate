@@ -1,12 +1,16 @@
 # Contributing to PlanGate
 
-PlanGate's core bet is: **never trust the command text, always verify the structured
-plan/diff the cloud provider itself computes.** The highest-leverage contributions
+PlanGate's core bet is: **never trust the command text when a structured plan/diff
+exists, and when it doesn't, never guess — ask.** The highest-leverage contributions
 right now are the ones that extend that principle to more ground:
 
 - **A new provider** (`src/providers/`) — anything with a native "show me what
   would change" primitive is a good fit: Pulumi (`pulumi preview --json`), AWS CDK
-  (`cdk diff`), GCP Deployment Manager, Ansible (`--check` + `--diff`).
+  (`cdk diff`), GCP Deployment Manager, Ansible (`--check` + `--diff`), Podman.
+- **Tightening an existing Tier 3 provider** (`docker.ts`, `database.ts`,
+  `awsSingleShot.ts`) — e.g. live-inspecting a container's mounts before
+  `docker rm -v` instead of always asking, or enumerating `docker volume prune`'s
+  target set from `docker volume ls -f dangling=true` before it runs.
 - **A new external scanner integration** (`src/policy/externalScanners.ts`) —
   today only `checkov` is wired in. `tfsec`/`trivy` and `cfn-guard` are natural
   next additions; the `runCheckov` function is meant to be a template, not a
