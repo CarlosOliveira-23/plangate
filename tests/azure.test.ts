@@ -35,4 +35,16 @@ describe("parseWhatIfJson", () => {
   it("drops NoChange entries", () => {
     expect(changes.find((c) => c.address.includes("storageAccounts"))).toBeUndefined();
   });
+
+  it("also accepts the properties.changes wrapper (the raw ARM WhatIfOperationResult shape)", () => {
+    const wrapped = JSON.stringify({ status: "Succeeded", properties: { changes: JSON.parse(fixture).changes } });
+    expect(parseWhatIfJson(wrapped)).toHaveLength(2);
+  });
+
+  it("drops NoEffect entries like NoChange", () => {
+    const withNoEffect = JSON.stringify({
+      changes: [{ resourceId: "/subscriptions/s/resourceGroups/r/providers/Microsoft.Web/sites/x", changeType: "NoEffect" }]
+    });
+    expect(parseWhatIfJson(withNoEffect)).toHaveLength(0);
+  });
 });

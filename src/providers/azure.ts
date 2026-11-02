@@ -8,13 +8,20 @@ export function isAzureDeployApplyLike(command: string): boolean {
 
 interface WhatIfChange {
   resourceId: string;
-  changeType: "Create" | "Delete" | "Modify" | "Deploy" | "Ignore" | "NoChange" | "Unsupported";
+  changeType: "Create" | "Delete" | "Modify" | "Deploy" | "Ignore" | "NoChange" | "NoEffect" | "Unsupported";
   before?: Record<string, unknown> | null;
   after?: Record<string, unknown> | null;
 }
 
+/**
+ * Azure's own docs disagree on whether `az ... what-if -o json` returns
+ * `{ changes }` directly or `{ properties: { changes } }` (the raw ARM
+ * WhatIfOperationResult shape) -- the conceptual docs and the REST reference
+ * describe it differently and the CLI page is gone. Accept either.
+ */
 interface WhatIfResponse {
   changes?: WhatIfChange[];
+  properties?: { changes?: WhatIfChange[] };
 }
 
 function mapAction(changeType: WhatIfChange["changeType"]): ChangeAction {
@@ -28,6 +35,7 @@ function mapAction(changeType: WhatIfChange["changeType"]): ChangeAction {
       return "update";
     case "Ignore":
     case "NoChange":
+    case "NoEffect":
       return "no-op";
     default:
       return "unknown";
@@ -62,7 +70,7 @@ function extractTags(change: WhatIfChange): Record<string, string> {
 
 export function parseWhatIfJson(json: string): ResourceChange[] {
   const parsed = JSON.parse(json) as WhatIfResponse;
-  const changes = parsed.changes ?? [];
+  const changes = parsed.changes ?? parsed.properties?.changes ?? [];
 
   return changes
     .map((c) => ({
