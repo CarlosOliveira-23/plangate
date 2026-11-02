@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - name: Dogfood -- a known-destructive command must be denied
+        run: |
+          OUT=$(node dist/cli.js check -- aws rds delete-db-instance --db-instance-identifier prod-db --skip-final-snapshot) && EXIT=0 || EXIT=$?
+          echo "$OUT"
+          echo "$OUT" | grep -q "^DENY" || (echo "expected a DENY verdict" && exit 1)
+          [ "$EXIT" -eq 1 ] || (echo "expected exit code 1" && exit 1)

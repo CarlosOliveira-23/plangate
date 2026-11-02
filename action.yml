@@ -1,0 +1,34 @@
+name: "PlanGate"
+description: "Gates a proposed Terraform/CloudFormation/Azure/kubectl command on its real structured plan, not the command text. Use it to pre-flight a PR the same way the Claude Code hook gates an agent."
+branding:
+  icon: "shield"
+  color: "red"
+
+inputs:
+  command:
+    description: "The command to evaluate, e.g. 'terraform apply -auto-approve'."
+    required: true
+  working-directory:
+    description: "Directory to run the command's plan/diff extraction in."
+    required: false
+    default: "."
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Install and build PlanGate
+      shell: bash
+      run: |
+        cd "${{ github.action_path }}"
+        npm ci
+        npm run build
+
+    - name: Evaluate command with PlanGate
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: node "${{ github.action_path }}/dist/cli.js" check -- ${{ inputs.command }}
