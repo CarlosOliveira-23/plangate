@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import pc from "picocolors";
 
@@ -38,7 +39,7 @@ export interface InitHookOptions {
  */
 export async function runInitHook(options: InitHookOptions): Promise<number> {
   const path = options.global
-    ? join(process.env.HOME ?? "~", ".claude", "settings.json")
+    ? join(homedir(), ".claude", "settings.json")
     : join(process.cwd(), ".claude", "settings.json");
 
   let settings: ClaudeSettings = {};
