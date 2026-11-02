@@ -25,6 +25,8 @@ jobs:
       - run: npm run build
 
       - name: Dogfood -- a known-destructive command must be denied
+        env:
+          NO_COLOR: "1"
         run: |
           OUT=$(node dist/cli.js check -- aws rds delete-db-instance --db-instance-identifier prod-db --skip-final-snapshot) && EXIT=0 || EXIT=$?
           echo "$OUT"
