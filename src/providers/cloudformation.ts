@@ -170,10 +170,10 @@ export function getCloudFormationPlan(command: string, cwd: string): PlanResult 
       cwd
     );
 
-    for (let attempt = 0; attempt < 10; attempt++) {
-      if (describeResult.status !== 0) break;
-      const parsed = JSON.parse(describeResult.stdout) as DescribeChangeSetResponse;
-      if (parsed.Status !== "CREATE_PENDING" && parsed.Status !== "CREATE_IN_PROGRESS") break;
+    let status: string | undefined;
+    for (let attempt = 0; attempt < 10 && describeResult.status === 0; attempt++) {
+      status = (JSON.parse(describeResult.stdout) as DescribeChangeSetResponse).Status;
+      if (status !== "CREATE_PENDING" && status !== "CREATE_IN_PROGRESS") break;
       describeResult = run(
         "aws",
         ["cloudformation", "describe-change-set", "--stack-name", stackName, "--change-set-name", changeSetName, "--output", "json", ...globalArgs],
@@ -187,6 +187,17 @@ export function getCloudFormationPlan(command: string, cwd: string): PlanResult 
         changes: [],
         degraded: true,
         note: "Could not read back the review change set. Refusing to approve an unverified stack change."
+      };
+    }
+
+    // Still computing after 10 polls, or we never got a status at all: we have no
+    // reliable diff to decide on, so this must not fall through to an "allow".
+    if (status === "CREATE_PENDING" || status === "CREATE_IN_PROGRESS" || status === undefined) {
+      return {
+        provider: "cloudformation",
+        changes: [],
+        degraded: true,
+        note: `Change set did not finish computing in time (status: ${status ?? "unknown"}). Refusing to approve an unverified stack change.`
       };
     }
 
