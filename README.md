@@ -128,9 +128,11 @@ possible at all, it asks a human instead of guessing.
 ## 🚀 Quick Start
 
 ```bash
+# try it with nothing installed:
+npx github:CarlosOliveira-23/plangate check -- terraform apply
+
+# or install it:
 npm install -g plangate
-# or, no install:
-npx plangate check -- terraform apply
 ```
 
 ```bash
